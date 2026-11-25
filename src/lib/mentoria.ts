@@ -52,14 +52,53 @@ export function insignias(s: Stats) {
   ];
 }
 
+// ---------- Visibilidad del perfil ----------
+// Campos que cada persona puede ocultar de su perfil público.
+export const CAMPOS_OCULTABLES = [
+  { id: "photo", texto: "Fotografía" },
+  { id: "semester", texto: "Semestre o generación" },
+  { id: "bio", texto: "Descripción personal" },
+  { id: "experience_academic", texto: "Experiencia académica" },
+  { id: "experience_professional", texto: "Experiencia profesional" },
+  { id: "exchanges", texto: "Intercambios" },
+  { id: "certifications", texto: "Certificaciones" },
+  { id: "tools", texto: "Herramientas y tecnologías" },
+  { id: "industries", texto: "Industrias o empresas" },
+  { id: "languages", texto: "Idiomas" },
+];
+
+// Devuelve el perfil sin los campos que su dueño decidió ocultar.
+export function perfilPublico<T extends Record<string, any>>(p: T): T {
+  const oculto = new Set<string>(p.hidden_fields ?? []);
+  const q: Record<string, any> = { ...p };
+  if (oculto.has("photo")) q.photo_url = null;
+  if (oculto.has("semester")) { q.semester = null; q.graduation_year = null; }
+  if (oculto.has("bio")) q.bio = null;
+  if (oculto.has("experience_academic")) q.experience_academic = null;
+  if (oculto.has("experience_professional")) q.experience_professional = null;
+  if (oculto.has("exchanges")) q.exchanges = null;
+  if (oculto.has("certifications")) q.certifications = [];
+  if (oculto.has("tools")) q.tools = [];
+  if (oculto.has("industries")) q.industries = [];
+  if (oculto.has("languages")) q.languages = [];
+  return q as T;
+}
+
 // ---------- Matching (recomendaciones) ----------
-// Puntaje simple y explicable: temas en común, misma carrera, experiencia
-// internacional si la busca, y que tenga horarios disponibles.
+// Puntaje simple y explicable: temas en común, misma carrera, semestre más
+// avanzado, experiencia internacional, certificaciones o experiencia profesional
+// según lo que busca, palabras de sus objetivos y horarios disponibles.
 const TEMAS_INTERNACIONALES = ["Intercambios académicos", "Experiencias internacionales"];
+const TEMAS_PROFESIONALES = ["Internships", "Prácticas profesionales", "Empleabilidad", "Entrevistas"];
+const VACIAS = new Set(["para", "como", "quiero", "sobre", "tener", "hacer", "algo", "este", "esta", "entre", "desde", "pero", "porque", "también", "mucho", "mejor", "poder", "saber", "conseguir", "lograr", "próximo", "verano"]);
 
 export function puntaje(
-  mentor: { career: string | null; ofrece: string[]; has_international_experience: boolean; tieneHorario: boolean },
-  yo: { career: string | null; busco: string[] },
+  mentor: {
+    career: string | null; ofrece: string[]; has_international_experience: boolean; tieneHorario: boolean;
+    is_alumni?: boolean; semester?: number | null; certifications?: string[]; experience_professional?: string | null;
+    bio?: string | null; experience_academic?: string | null; exchanges?: string | null; tools?: string[]; industries?: string[];
+  },
+  yo: { career: string | null; busco: string[]; semester?: number | null; goals?: string | null },
 ) {
   const comunes = mentor.ofrece.filter((t) => yo.busco.includes(t));
   let p = comunes.length * 3;
@@ -69,9 +108,28 @@ export function puntaje(
     p += 2;
     razones.push("tu misma carrera");
   }
+  if (yo.semester && (mentor.is_alumni || (mentor.semester ?? 0) > yo.semester)) p += 1;
   if (mentor.has_international_experience && yo.busco.some((t) => TEMAS_INTERNACIONALES.includes(t))) {
     p += 2;
     razones.push("experiencia internacional");
+  }
+  if ((mentor.certifications ?? []).length && yo.busco.includes("Certificaciones profesionales")) {
+    p += 2;
+    razones.push("tiene certificaciones");
+  }
+  if (mentor.experience_professional && yo.busco.some((t) => TEMAS_PROFESIONALES.includes(t))) {
+    p += 2;
+    razones.push("experiencia profesional");
+  }
+  if (yo.goals) {
+    const texto = [mentor.bio, mentor.experience_professional, mentor.experience_academic, mentor.exchanges,
+      ...(mentor.tools ?? []), ...(mentor.industries ?? []), ...(mentor.certifications ?? [])].join(" ").toLowerCase();
+    const palabras = [...new Set(yo.goals.toLowerCase().match(/[a-záéíóúñü+#]{4,}/g) ?? [])].filter((w) => !VACIAS.has(w));
+    const hits = palabras.filter((w) => texto.includes(w)).length;
+    if (hits) {
+      p += Math.min(hits, 3);
+      razones.push("afín a tus objetivos");
+    }
   }
   if (mentor.tieneHorario) p += 1;
   return { puntaje: p, razones };

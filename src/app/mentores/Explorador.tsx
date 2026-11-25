@@ -3,7 +3,7 @@
 // Catálogo de mentores con búsqueda y filtros.
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Chip, inputCls } from "@/components/ui";
+import { Avatar, Chip, inputCls } from "@/components/ui";
 import { DIAS_CORTOS, MODALIDAD, horas } from "@/lib/mentoria";
 
 type Props = {
@@ -23,7 +23,9 @@ const inicial = {
   idioma: "",
   modalidad: "",
   dia: "",
+  industria: "",
   internacional: false,
+  experiencia: false,
   certificaciones: false,
   soloFavoritos: false,
   orden: "recomendados",
@@ -35,6 +37,7 @@ export default function Explorador({ mentores, temas, favoritos, hayIntereses }:
 
   const carreras = [...new Set(mentores.map((m) => m.career).filter(Boolean))].sort();
   const idiomas = [...new Set(mentores.flatMap((m) => m.languages ?? []))].sort();
+  const industrias = [...new Set(mentores.flatMap((m) => m.industries ?? []))].sort();
   const categorias = [...new Set(temas.map((t) => t.category))];
   const temasVisibles = temas.filter((t) => !f.categoria || t.category === f.categoria);
 
@@ -63,7 +66,9 @@ export default function Explorador({ mentores, temas, favoritos, hayIntereses }:
       if (f.idioma && !(m.languages ?? []).includes(f.idioma)) return false;
       if (f.modalidad && m.modality !== f.modalidad && m.modality !== "ambas") return false;
       if (f.dia !== "" && !m.dias.includes(Number(f.dia))) return false;
+      if (f.industria && !(m.industries ?? []).includes(f.industria)) return false;
       if (f.internacional && !m.has_international_experience) return false;
+      if (f.experiencia && !m.experience_professional) return false;
       if (f.certificaciones && !(m.certifications ?? []).length) return false;
       if (f.soloFavoritos && !favoritos.includes(m.id)) return false;
       return true;
@@ -132,6 +137,13 @@ export default function Explorador({ mentores, temas, favoritos, hayIntereses }:
           </div>
         )}
         <div>
+          <label className={lbl}>Industria</label>
+          <select className={sel} value={f.industria} onChange={(e) => set("industria", e.target.value)}>
+            <option value="">Cualquiera</option>
+            {industrias.map((i) => <option key={i}>{i}</option>)}
+          </select>
+        </div>
+        <div>
           <label className={lbl}>Idioma</label>
           <select className={sel} value={f.idioma} onChange={(e) => set("idioma", e.target.value)}>
             <option value="">Cualquiera</option>
@@ -157,6 +169,10 @@ export default function Explorador({ mentores, temas, favoritos, hayIntereses }:
           <label className="flex items-center gap-2">
             <input type="checkbox" checked={f.internacional} onChange={(e) => set("internacional", e.target.checked)} />
             Con experiencia internacional
+          </label>
+          <label className="flex items-center gap-2">
+            <input type="checkbox" checked={f.experiencia} onChange={(e) => set("experiencia", e.target.checked)} />
+            Con experiencia profesional
           </label>
           <label className="flex items-center gap-2">
             <input type="checkbox" checked={f.certificaciones} onChange={(e) => set("certificaciones", e.target.checked)} />
@@ -211,13 +227,17 @@ function TarjetaMentor({ m, favorito }: { m: any; favorito: boolean }) {
   return (
     <article className="flex flex-col rounded-2xl border border-slate-200 bg-white p-5">
       <div className="flex items-start justify-between gap-2">
-        <div>
+        <div className="flex items-start gap-3">
+          <Avatar url={m.photo_url} nombre={m.full_name} />
+          <div>
           <h3 className="font-bold text-slate-900">
             {m.full_name} {favorito && <span title="Favorito">★</span>}
           </h3>
           <p className="text-sm text-slate-600">
-            {m.career} · {m.is_alumni ? `Egresado ${m.graduation_year ?? ""}` : `${m.semester ?? "?"}° semestre`}
+            {m.career}
+            {m.is_alumni ? ` · Egresado ${m.graduation_year ?? ""}` : m.semester ? ` · ${m.semester}° semestre` : ""}
           </p>
+          </div>
         </div>
         {m.is_demo && <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-500">DEMO</span>}
       </div>

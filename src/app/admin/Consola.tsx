@@ -9,7 +9,7 @@ import { ESTADOS, fecha, horas, insignias } from "@/lib/mentoria";
 
 type Props = {
   usuarios: any[]; sesiones: any[]; reportes: any[]; temas: any[];
-  feedback: any[]; perfilTemas: any[]; reglas: any[]; stats: any[];
+  feedback: any[]; perfilTemas: any[]; reglas: any[]; stats: any[]; reconocimientos: any[];
 };
 
 const PESTANAS = ["Resumen", "Validar mentores", "Usuarios", "Sesiones", "Reportes", "Temas", "Reglas", "Reconocimientos"] as const;
@@ -130,7 +130,9 @@ export default function Consola(p: Props) {
       {tab === "Reglas" && <Reglas reglas={p.reglas} hacer={hacer} />}
 
       {tab === "Reconocimientos" && (
-        <Tarjeta titulo="Reconocimientos de mentores">
+        <div className="space-y-4">
+        <DarReconocimiento usuarios={p.usuarios} reconocimientos={p.reconocimientos} hacer={hacer} nombre={nombre} />
+        <Tarjeta titulo="Insignias automáticas">
           <p className="mb-3 text-sm text-slate-500">Se otorgan automáticamente según sesiones, horas, personas y temas.</p>
           {p.stats.length === 0 ? <Vacio>Aún no hay sesiones realizadas.</Vacio> : (
             <ul className="divide-y divide-slate-100 text-sm">
@@ -143,6 +145,7 @@ export default function Consola(p: Props) {
             </ul>
           )}
         </Tarjeta>
+        </div>
       )}
     </div>
   );
@@ -212,6 +215,18 @@ function Resumen({ usuarios, sesiones, feedback, temas, perfilTemas, nombreTema 
                 <li key={k} className="flex justify-between"><span className="text-slate-700">{v.texto}</span><strong>{sesiones.filter((s) => s.status === k).length}</strong></li>
               ))}
             </ul>
+          </Tarjeta>
+          <Tarjeta titulo="Sugerencias de temas nuevos">
+            {(() => {
+              const existentes = new Set(temas.map((t) => t.name.toLowerCase()));
+              const otros: string[] = feedback.map((f) => String(f.topic_covered ?? "").trim()).filter((t) => t && !existentes.has(t.toLowerCase()) && t !== "Otro tema");
+              const conteo: Record<string, number> = {};
+              for (const t of otros) conteo[t] = (conteo[t] ?? 0) + 1;
+              const cuenta = Object.entries(conteo).sort((x, y) => y[1] - x[1]);
+              return cuenta.length ? (
+                <ul className="list-disc pl-5 text-sm text-slate-700">{cuenta.slice(0, 6).map(([t, n]) => <li key={t}>{t} ({n})</li>)}</ul>
+              ) : <Vacio>Aparecerán aquí los temas que los estudiantes digan haber tratado y que no existen como categoría.</Vacio>;
+            })()}
           </Tarjeta>
           <Tarjeta titulo="Oportunidades: temas sin mentores">
             {huecos.length === 0 ? <Vacio>Todos los temas con demanda tienen al menos un mentor.</Vacio> : (
@@ -329,6 +344,45 @@ function Reglas({ reglas, hacer }: { reglas: any[]; hacer: (p: PromiseLike<{ err
           setNueva("");
         }}>Agregar</button>
       </div>
+    </Tarjeta>
+  );
+}
+
+function DarReconocimiento({ usuarios, reconocimientos, hacer, nombre }: {
+  usuarios: any[]; reconocimientos: any[]; hacer: (p: PromiseLike<{ error: any }>) => void; nombre: (id: string) => string;
+}) {
+  const supabase = createClient();
+  const mentores = usuarios.filter((u) => u.is_mentor && u.mentor_status === "approved");
+  const [mentor, setMentor] = useState("");
+  const [titulo, setTitulo] = useState("");
+  const [nota, setNota] = useState("");
+  return (
+    <Tarjeta titulo="Reconocimientos por contribución a la comunidad">
+      <p className="mb-3 text-sm text-slate-500">Se muestran en el perfil y el panel del mentor, y complementan las insignias automáticas.</p>
+      <div className="grid gap-2 sm:grid-cols-[1fr_1fr_1fr_auto]">
+        <select className={inputCls} value={mentor} onChange={(e) => setMentor(e.target.value)}>
+          <option value="">Elige un mentor</option>
+          {mentores.map((m) => <option key={m.id} value={m.id}>{m.full_name}</option>)}
+        </select>
+        <input className={inputCls} placeholder="Ej. Mentor del semestre" value={titulo} onChange={(e) => setTitulo(e.target.value)} />
+        <input className={inputCls} placeholder="Motivo (opcional)" value={nota} onChange={(e) => setNota(e.target.value)} />
+        <button className={`${btnPrimario} mt-1`} onClick={async () => {
+          if (!mentor || titulo.trim().length < 3) return;
+          const { data: { user } } = await supabase.auth.getUser();
+          hacer(supabase.from("recognitions").insert({ mentor_id: mentor, title: titulo.trim(), note: nota.trim() || null, created_by: user?.id }));
+          setTitulo(""); setNota("");
+        }}>Otorgar</button>
+      </div>
+      {reconocimientos.length > 0 && (
+        <ul className="mt-4 divide-y divide-slate-100 text-sm">
+          {reconocimientos.map((r) => (
+            <li key={r.id} className="flex items-center justify-between gap-2 py-2">
+              <span className="text-slate-800">🏅 <strong>{r.title}</strong> · {nombre(r.mentor_id)}{r.note ? ` · ${r.note}` : ""}</span>
+              <button className="text-xs text-red-600 underline" onClick={() => hacer(supabase.from("recognitions").delete().eq("id", r.id))}>quitar</button>
+            </li>
+          ))}
+        </ul>
+      )}
     </Tarjeta>
   );
 }

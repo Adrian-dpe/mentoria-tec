@@ -1,7 +1,7 @@
 // Consultas que usan varias páginas del servidor.
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
-import type { Stats } from "@/lib/mentoria";
+import { perfilPublico, type Stats } from "@/lib/mentoria";
 
 export async function usuarioActual() {
   const supabase = await createClient();
@@ -41,7 +41,7 @@ export async function cargarMentores(supabase: Awaited<ReturnType<typeof createC
       .filter(Boolean) as string[];
     const horarios = (disp ?? []).filter((d) => d.mentor_id === m.id);
     return {
-      ...m,
+      ...perfilPublico(m),
       ofrece,
       linkedin: (links ?? []).find((l) => l.profile_id === m.id)?.linkedin_url ?? null,
       dias: [...new Set(horarios.map((h) => h.weekday))].sort(),

@@ -7,6 +7,8 @@ import { usuarioActual } from "@/lib/datos";
 import { MODALIDAD, fecha } from "@/lib/mentoria";
 import AccionesSesion from "./AccionesSesion";
 import { Reportar } from "@/app/mentores/[id]/Acciones";
+import { Chat, Seguimiento } from "./Conversacion";
+import { preguntasSugeridas } from "@/lib/asistente";
 
 export default async function SesionPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -17,11 +19,14 @@ export default async function SesionPage({ params }: { params: Promise<{ id: str
 
   const soyMentor = s.mentor_id === user.id;
   const otroId = soyMentor ? s.student_id : s.mentor_id;
-  const [{ data: otro }, { data: link }, { data: feedback }] = await Promise.all([
+  const [{ data: otro }, { data: link }, { data: feedback }, { data: mensajes }] = await Promise.all([
     supabase.from("profiles").select("full_name, career, semester, is_alumni, graduation_year").eq("id", otroId).single(),
     supabase.from("profile_links").select("linkedin_url").eq("profile_id", otroId).maybeSingle(),
     supabase.from("feedback").select("*").eq("session_id", id).maybeSingle(),
+    supabase.from("messages").select("id, author_id, body, created_at").eq("session_id", id).order("created_at"),
   ]);
+  const tema = s.topics?.name ?? null;
+  const preparacion = ["pending", "accepted", "info_requested", "reschedule_proposed"].includes(s.status);
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -87,6 +92,27 @@ export default async function SesionPage({ params }: { params: Promise<{ id: str
           </div>
         </Tarjeta>
 
+        {preparacion && (
+          <Tarjeta titulo={soyMentor ? "Preguntas que podría traer el estudiante" : "Prepara tu sesión"}>
+            <p className="text-sm text-slate-500">Preguntas sugeridas para {tema ?? "esta mentoría"}:</p>
+            <ul className="mt-2 list-disc pl-5 text-sm text-slate-700">
+              {preguntasSugeridas(tema).map((q) => <li key={q}>{q}</li>)}
+            </ul>
+          </Tarjeta>
+        )}
+
+        <Chat
+          sesionId={s.id}
+          yo={user.id}
+          nombres={{ [otroId]: otro?.full_name ?? "—" }}
+          iniciales={mensajes ?? []}
+          abierta={!["rejected", "cancelled"].includes(s.status)}
+        />
+
+        {s.status === "completed" && (
+          <Seguimiento sesionId={s.id} soyMentor={soyMentor} actual={s.followup} tema={tema} />
+        )}
+
         <AccionesSesion
           sesion={s}
           soyMentor={soyMentor}
@@ -99,6 +125,7 @@ export default async function SesionPage({ params }: { params: Promise<{ id: str
             <p className="text-sm text-slate-700">
               Utilidad {feedback.usefulness}/5 · Claridad {feedback.clarity}/5 · Disposición {feedback.attitude}/5
             </p>
+            {feedback.topic_covered && <p className="mt-1 text-sm text-slate-600">Tema abordado: {feedback.topic_covered}</p>}
             {feedback.comment && <p className="mt-2 text-sm italic text-slate-700">“{feedback.comment}”</p>}
           </Tarjeta>
         )}

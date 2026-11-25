@@ -6,6 +6,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { extraerDeLinkedIn } from "@/lib/asistente";
+import { CAMPOS_OCULTABLES } from "@/lib/mentoria";
 
 type Tema = { id: number; name: string; category: string };
 type MiTema = { topic_id: number; kind: string };
@@ -35,6 +37,10 @@ export default function ProfileForm({ userId, email, perfil, link, temas, misTem
     bio: perfil?.bio ?? "",
     is_mentor: perfil?.is_mentor ?? false,
     experience_professional: perfil?.experience_professional ?? "",
+    experience_academic: perfil?.experience_academic ?? "",
+    goals: perfil?.goals ?? "",
+    photo_url: perfil?.photo_url ?? "",
+    hidden_fields: (perfil?.hidden_fields ?? []) as string[],
     exchanges: perfil?.exchanges ?? "",
     certifications: (perfil?.certifications ?? []).join(", "),
     industries: (perfil?.industries ?? []).join(", "),
@@ -55,6 +61,45 @@ export default function ProfileForm({ userId, email, perfil, link, temas, misTem
   );
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [textoLinkedIn, setTextoLinkedIn] = useState("");
+  const [aviso, setAviso] = useState<string | null>(null);
+  const [subiendo, setSubiendo] = useState(false);
+
+  // Sube la foto a la carpeta del usuario en Supabase Storage.
+  async function subirFoto(archivo: File | undefined) {
+    if (!archivo) return;
+    if (archivo.size > 2 * 1024 * 1024) return setError("La foto debe pesar menos de 2 MB.");
+    setError(null);
+    setSubiendo(true);
+    const supabase = createClient();
+    const ext = archivo.type === "image/png" ? "png" : archivo.type === "image/webp" ? "webp" : "jpg";
+    const ruta = `${userId}/foto-${Date.now()}.${ext}`;
+    const { error } = await supabase.storage.from("avatars").upload(ruta, archivo, { contentType: archivo.type });
+    setSubiendo(false);
+    if (error) return setError("No se pudo subir la foto: " + error.message);
+    set("photo_url", supabase.storage.from("avatars").getPublicUrl(ruta).data.publicUrl);
+  }
+
+  // Prellenado asistido: sugiere datos a partir del texto que el usuario pega de su LinkedIn.
+  function autocompletar() {
+    const r = extraerDeLinkedIn(textoLinkedIn, temas.map((t) => t.name));
+    const unir = (actual: string, nuevos: string[]) => [...new Set([...lista(actual), ...nuevos])].join(", ");
+    setF((p) => ({
+      ...p,
+      tools: unir(p.tools, r.herramientas),
+      certifications: unir(p.certifications, r.certificaciones),
+      industries: unir(p.industries, r.industrias),
+      languages: [...new Set([...p.languages, ...r.idiomas])],
+    }));
+    const ids = temas.filter((t) => r.temas.includes(t.name)).map((t) => t.id);
+    if (f.is_mentor) setOfrezco(new Set([...ofrezco, ...ids]));
+    const total = r.herramientas.length + r.certificaciones.length + r.industrias.length + r.idiomas.length + (f.is_mentor ? ids.length : 0);
+    setAviso(
+      total
+        ? `Listo: agregamos ${total} sugerencia(s). Revísalas antes de guardar.`
+        : "No encontramos datos que sugerir; puedes llenarlos a mano.",
+    );
+  }
 
   const set = (campo: string, valor: unknown) => setF((prev) => ({ ...prev, [campo]: valor }));
   const lista = (texto: string) =>
@@ -99,6 +144,10 @@ export default function ProfileForm({ userId, email, perfil, link, temas, misTem
           ? { mentor_status: "pending" }
           : {}),
         experience_professional: f.experience_professional.trim() || null,
+        experience_academic: f.experience_academic.trim() || null,
+        goals: f.goals.trim() || null,
+        photo_url: f.photo_url || null,
+        hidden_fields: f.hidden_fields,
         exchanges: f.exchanges.trim() || null,
         has_international_experience: f.exchanges.trim().length > 0,
         certifications: lista(f.certifications),
@@ -172,6 +221,24 @@ export default function ProfileForm({ userId, email, perfil, link, temas, misTem
       <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5">
         <h2 className="text-lg font-bold text-slate-900">Datos básicos</h2>
         <p className="text-sm text-slate-500">Correo: {email}</p>
+        <div className="flex items-center gap-4">
+          {f.photo_url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={f.photo_url} alt="Tu foto" className="h-20 w-20 rounded-full object-cover" />
+          ) : (
+            <div className="flex h-20 w-20 items-center justify-center rounded-full bg-slate-100 text-2xl text-slate-400">👤</div>
+          )}
+          <div className="text-sm">
+            <label className="cursor-pointer font-semibold text-blue-700 underline">
+              {subiendo ? "Subiendo…" : f.photo_url ? "Cambiar foto" : "Subir foto (opcional)"}
+              <input type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={(e) => subirFoto(e.target.files?.[0])} />
+            </label>
+            {f.photo_url && (
+              <button type="button" className="ml-3 text-slate-500 underline" onClick={() => set("photo_url", "")}>Quitar</button>
+            )}
+            <p className="text-xs text-slate-500">JPG, PNG o WebP, máximo 2 MB.</p>
+          </div>
+        </div>
         <div>
           <label className={label}>Nombre completo</label>
           <input className={input} required value={f.full_name} onChange={(e) => set("full_name", e.target.value)} />
@@ -217,6 +284,20 @@ export default function ProfileForm({ userId, email, perfil, link, temas, misTem
             <input type="checkbox" checked={f.linkedin_visible} onChange={(e) => set("linkedin_visible", e.target.checked)} />
             Mostrar mi LinkedIn a otros usuarios
           </label>
+          <details className="mt-3 rounded-lg bg-blue-50 p-3 text-sm text-blue-900">
+            <summary className="cursor-pointer font-semibold">✨ Autocompletar con mi LinkedIn</summary>
+            <p className="mt-2">
+              Copia el texto de tu perfil de LinkedIn (Acerca de, Experiencia, Licencias y certificaciones,
+              Aptitudes, Idiomas) y pégalo aquí. Sugerimos herramientas, certificaciones, industrias, idiomas
+              y temas. El texto no se guarda ni se envía a nadie.
+            </p>
+            <textarea className={input} rows={4} value={textoLinkedIn} onChange={(e) => setTextoLinkedIn(e.target.value)} placeholder="Pega aquí el texto de tu LinkedIn…" />
+            <button type="button" onClick={autocompletar} disabled={!textoLinkedIn.trim()}
+              className="mt-2 rounded-lg bg-blue-700 px-3 py-1.5 font-semibold text-white disabled:opacity-60">
+              Sugerir datos
+            </button>
+            {aviso && <p className="mt-2">{aviso}</p>}
+          </details>
         </div>
         <div>
           <label className={label}>Sobre mí (opcional)</label>
@@ -229,6 +310,14 @@ export default function ProfileForm({ userId, email, perfil, link, temas, misTem
         <h2 className="text-lg font-bold text-slate-900">¿En qué te gustaría recibir orientación?</h2>
         <p className="text-sm text-slate-500">Lo usamos para recomendarte mentores.</p>
         <Chips sel={busco} setSel={setBusco} />
+        <label className={`${label} mt-4`}>¿Qué te gustaría lograr? (opcional)</label>
+        <textarea
+          className={input}
+          rows={2}
+          placeholder="Ej. Conseguir un internship de datos el próximo verano y sacar una certificación de nube."
+          value={f.goals}
+          onChange={(e) => set("goals", e.target.value)}
+        />
       </section>
 
       {/* Mentor */}
@@ -249,6 +338,10 @@ export default function ProfileForm({ userId, email, perfil, link, temas, misTem
             <div>
               <label className={label}>Experiencia profesional (internships, trabajos, proyectos)</label>
               <textarea className={input} rows={3} value={f.experience_professional} onChange={(e) => set("experience_professional", e.target.value)} />
+            </div>
+            <div>
+              <label className={label}>Experiencia académica (proyectos, concentración, investigación, reconocimientos)</label>
+              <textarea className={input} rows={2} value={f.experience_academic} onChange={(e) => set("experience_academic", e.target.value)} />
             </div>
             <div>
               <label className={label}>Intercambios o experiencias internacionales</label>
@@ -309,6 +402,24 @@ export default function ProfileForm({ userId, email, perfil, link, temas, misTem
               </div>
             </div>
             <p className="text-sm text-slate-500">Tus días y horarios disponibles los configurarás en tu panel.</p>
+            <div className="rounded-lg bg-slate-50 p-3">
+              <p className={label}>¿Qué quieres mostrar en tu perfil público?</p>
+              <p className="text-xs text-slate-500">Tu nombre, carrera y temas siempre se muestran. Desmarca lo que prefieras ocultar.</p>
+              <div className="mt-2 grid gap-1 sm:grid-cols-2">
+                {CAMPOS_OCULTABLES.map((c) => (
+                  <label key={c.id} className="flex items-center gap-2 text-sm text-slate-700">
+                    <input
+                      type="checkbox"
+                      checked={!f.hidden_fields.includes(c.id)}
+                      onChange={(e) =>
+                        set("hidden_fields", e.target.checked ? f.hidden_fields.filter((x) => x !== c.id) : [...f.hidden_fields, c.id])
+                      }
+                    />
+                    {c.texto}
+                  </label>
+                ))}
+              </div>
+            </div>
           </>
         )}
       </section>

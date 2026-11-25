@@ -18,7 +18,7 @@ export default async function MentoresPage() {
 
   const conPuntaje = mentores
     .filter((m) => m.id !== user.id)
-    .map((m) => ({ ...m, match: puntaje(m, { career: perfil.career, busco }) }));
+    .map((m) => ({ ...m, match: puntaje(m, { career: perfil.career, busco, semester: perfil.semester, goals: perfil.goals }) }));
 
   return (
     <div className="min-h-screen bg-slate-50">

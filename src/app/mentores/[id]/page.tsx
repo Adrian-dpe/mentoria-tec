@@ -2,9 +2,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import Nav from "@/components/Nav";
-import { Chip, Tarjeta } from "@/components/ui";
+import { Avatar, Chip, Tarjeta } from "@/components/ui";
 import { usuarioActual } from "@/lib/datos";
-import { DIAS, MODALIDAD, horas, insignias } from "@/lib/mentoria";
+import { DIAS, MODALIDAD, horas, insignias, perfilPublico } from "@/lib/mentoria";
 import Solicitud from "./Solicitud";
 import { Favorito, Reportar } from "./Acciones";
 
@@ -12,10 +12,12 @@ export default async function MentorPage({ params }: { params: Promise<{ id: str
   const { id } = await params;
   const { supabase, user } = await usuarioActual();
 
-  const { data: m } = await supabase.from("profiles").select("*").eq("id", id).single();
-  if (!m || !m.is_mentor || (m.mentor_status !== "approved" && m.id !== user.id)) notFound();
+  const { data: crudo } = await supabase.from("profiles").select("*").eq("id", id).single();
+  if (!crudo || !crudo.is_mentor || (crudo.mentor_status !== "approved" && crudo.id !== user.id)) notFound();
+  // Solo se muestra lo que el mentor decidió hacer público.
+  const m = perfilPublico(crudo);
 
-  const [{ data: link }, { data: pt }, { data: disp }, { data: bloqueadas }, { data: ocupados }, { data: fav }, { data: stats }] =
+  const [{ data: link }, { data: pt }, { data: disp }, { data: bloqueadas }, { data: ocupados }, { data: fav }, { data: stats }, { data: recon }] =
     await Promise.all([
       supabase.from("profile_links").select("linkedin_url").eq("profile_id", id).maybeSingle(),
       supabase.from("profile_topics").select("topic_id, topics(id, name)").eq("profile_id", id).eq("kind", "offer"),
@@ -24,6 +26,7 @@ export default async function MentorPage({ params }: { params: Promise<{ id: str
       supabase.rpc("mentor_busy", { p_mentor: id }),
       supabase.from("favorites").select("mentor_id").eq("student_id", user.id).eq("mentor_id", id).maybeSingle(),
       supabase.rpc("mentor_stats"),
+      supabase.from("recognitions").select("id, title, note, created_at").eq("mentor_id", id).order("created_at", { ascending: false }),
     ]);
 
   const temas = (pt ?? []).map((x: any) => x.topics).filter(Boolean) as { id: number; name: string }[];
@@ -51,11 +54,15 @@ export default async function MentorPage({ params }: { params: Promise<{ id: str
           <Link href="/mentores" className="text-sm text-blue-700 underline">← Volver al explorador</Link>
           <section className="rounded-2xl border border-slate-200 bg-white p-6">
             <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <h1 className="text-2xl font-bold text-slate-900">{m.full_name}</h1>
-                <p className="text-slate-600">
-                  {m.career} · {m.is_alumni ? `Egresado ${m.graduation_year ?? ""}` : `${m.semester ?? "?"}° semestre`}
-                </p>
+              <div className="flex items-center gap-4">
+                <Avatar url={m.photo_url} nombre={m.full_name} size={72} />
+                <div>
+                  <h1 className="text-2xl font-bold text-slate-900">{m.full_name}</h1>
+                  <p className="text-slate-600">
+                    {m.career}
+                    {m.is_alumni ? ` · Egresado ${m.graduation_year ?? ""}` : m.semester ? ` · ${m.semester}° semestre` : ""}
+                  </p>
+                </div>
               </div>
               <div className="flex items-center gap-3">
                 {!esYo && <Favorito mentorId={id} inicial={!!fav} />}
@@ -76,6 +83,15 @@ export default async function MentorPage({ params }: { params: Promise<{ id: str
               <span><strong>{horas(s.minutos)}</strong> horas de mentoría</span>
               <span><strong>{s.personas}</strong> personas apoyadas</span>
             </div>
+            {(recon ?? []).length > 0 && (
+              <div className="mt-3 space-y-1">
+                {(recon ?? []).map((r) => (
+                  <p key={r.id} className="text-sm text-slate-700">
+                    🏅 <strong>{r.title}</strong>{r.note ? ` · ${r.note}` : ""}
+                  </p>
+                ))}
+              </div>
+            )}
             {logradas.length > 0 && (
               <div className="mt-3 flex flex-wrap gap-2">
                 {logradas.map((i) => (

@@ -3,14 +3,15 @@ import Link from "next/link";
 import Nav from "@/components/Nav";
 import { Chip, Estado, Tarjeta, Vacio } from "@/components/ui";
 import { cargarMentores, usuarioActual } from "@/lib/datos";
-import { fecha, horas, insignias, puntaje } from "@/lib/mentoria";
+import { DIAS_CORTOS, fecha, horas, insignias, puntaje } from "@/lib/mentoria";
+import VisibilidadLinkedIn from "./VisibilidadLinkedIn";
 
 const ABIERTAS = ["pending", "info_requested", "reschedule_proposed"];
 
 export default async function PanelPage() {
   const { supabase, user, perfil } = await usuarioActual();
 
-  const [{ data: sesiones }, { data: favs }, { data: feedback }, datos] = await Promise.all([
+  const [{ data: sesiones }, { data: favs }, { data: feedback }, datos, { data: miDisp }, { data: miLink }, { data: misRecon }] = await Promise.all([
     supabase
       .from("sessions")
       .select("*, topics(name)")
@@ -19,6 +20,9 @@ export default async function PanelPage() {
     supabase.from("favorites").select("mentor_id").eq("student_id", user.id),
     supabase.from("feedback").select("*, sessions!inner(mentor_id)").eq("sessions.mentor_id", user.id),
     cargarMentores(supabase),
+    supabase.from("availability").select("weekday, start_time, end_time").eq("mentor_id", user.id).order("weekday").order("start_time"),
+    supabase.from("profile_links").select("linkedin_url, linkedin_visible").eq("profile_id", user.id).maybeSingle(),
+    supabase.from("recognitions").select("id, title, note").eq("mentor_id", user.id).order("created_at", { ascending: false }),
   ]);
 
   const todas = sesiones ?? [];
@@ -38,7 +42,7 @@ export default async function PanelPage() {
     .filter(Boolean) as string[];
   const recomendados = datos.mentores
     .filter((m) => m.id !== user.id)
-    .map((m) => ({ ...m, match: puntaje(m, { career: perfil.career, busco }) }))
+    .map((m) => ({ ...m, match: puntaje(m, { career: perfil.career, busco, semester: perfil.semester, goals: perfil.goals }) }))
     .sort((a, b) => b.match.puntaje - a.match.puntaje)
     .slice(0, 3);
   const favoritos = datos.mentores.filter((m) => (favs ?? []).some((f) => f.mentor_id === m.id));
@@ -69,6 +73,13 @@ export default async function PanelPage() {
     </ul>
   );
 
+  // Recordatorios: sesiones confirmadas en las próximas 48 horas.
+  const pronto = todas.filter((s) => {
+    const t = new Date(s.starts_at).getTime();
+    return s.status === "accepted" && t > ahora && t - ahora < 48 * 3600000;
+  });
+  const seguimientos = comoEstudiante.filter((s) => s.status === "completed" && s.followup);
+
   const proximasEst = comoEstudiante.filter((s) => s.status === "accepted" && new Date(s.starts_at).getTime() > ahora - 3600000);
   const abiertasEst = comoEstudiante.filter((s) => ABIERTAS.includes(s.status));
   const historialEst = comoEstudiante.filter((s) => !ABIERTAS.includes(s.status) && !proximasEst.includes(s)).reverse();
@@ -92,6 +103,17 @@ export default async function PanelPage() {
             </div>
           )}
         </div>
+
+        {pronto.length > 0 && (
+          <div className="space-y-2">
+            {pronto.map((s) => (
+              <Link key={s.id} href={`/sesiones/${s.id}`} className="block rounded-xl border border-green-200 bg-green-50 p-3 text-sm text-green-900 hover:border-green-300">
+                ⏰ <strong>Recordatorio:</strong> {s.topics?.name ?? "Mentoría"} con {nombre(s.student_id === user.id ? s.mentor_id : s.student_id)} el {fecha(s.starts_at)}
+                {s.meeting_link ? " · enlace listo" : ""}
+              </Link>
+            ))}
+          </div>
+        )}
 
         {/* ---------------- MENTOR ---------------- */}
         {perfil.is_mentor && (
@@ -151,6 +173,13 @@ export default async function PanelPage() {
                 titulo="Reconocimientos"
                 accion={<Link href="/constancia" className="text-sm text-blue-700 underline">Ver constancia</Link>}
               >
+                {(misRecon ?? []).length > 0 && (
+                  <ul className="mb-3 space-y-1">
+                    {(misRecon ?? []).map((r) => (
+                      <li key={r.id} className="text-sm text-slate-800">🏅 <strong>{r.title}</strong>{r.note ? ` · ${r.note}` : ""}</li>
+                    ))}
+                  </ul>
+                )}
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                   {insignias(misStats).map((i) => (
                     <div key={i.nombre} title={i.meta}
@@ -165,7 +194,22 @@ export default async function PanelPage() {
               <Tarjeta titulo="Historial de mentorías">
                 {historialMen.length ? <Lista items={historialMen.slice(0, 8)} rol="mentor" /> : <Vacio>Aún no hay historial.</Vacio>}
               </Tarjeta>
+              <Tarjeta titulo="Mi disponibilidad" accion={<Link href="/disponibilidad" className="text-sm text-blue-700 underline">Editar</Link>}>
+                {(miDisp ?? []).length === 0 ? (
+                  <Vacio>Aún no configuras horarios: los estudiantes no podrán pedirte sesiones.</Vacio>
+                ) : (
+                  <ul className="grid gap-1 text-sm text-slate-700 sm:grid-cols-2">
+                    {(miDisp ?? []).map((d, i) => (
+                      <li key={i}>{DIAS_CORTOS[d.weekday]} {d.start_time.slice(0, 5)}–{d.end_time.slice(0, 5)}</li>
+                    ))}
+                  </ul>
+                )}
+                <p className="mt-2 text-xs text-slate-500">Máximo {perfil.max_sessions_per_week} sesiones por semana · {perfil.session_duration_min} min por sesión</p>
+              </Tarjeta>
               <Tarjeta titulo="Mi perfil de mentor">
+                <div className="mb-3">
+                  <VisibilidadLinkedIn userId={user.id} url={miLink?.linkedin_url ?? null} visible={miLink?.linkedin_visible ?? true} />
+                </div>
                 <ul className="space-y-1 text-sm">
                   <li><Link href="/disponibilidad" className="text-blue-700 underline">Disponibilidad y fechas bloqueadas</Link></li>
                   <li><Link href={`/mentores/${user.id}`} className="text-blue-700 underline">Ver mi perfil como lo ven los estudiantes</Link></li>
@@ -205,6 +249,18 @@ export default async function PanelPage() {
             </Tarjeta>
             <Tarjeta titulo="Historial de sesiones">
               {historialEst.length ? <Lista items={historialEst.slice(0, 8)} rol="estudiante" /> : <Vacio>Aún no hay historial.</Vacio>}
+            </Tarjeta>
+            <Tarjeta titulo="Recomendaciones de tus mentores">
+              {seguimientos.length ? (
+                <ul className="space-y-3">
+                  {seguimientos.slice(0, 4).map((s) => (
+                    <li key={s.id} className="text-sm">
+                      <Link href={`/sesiones/${s.id}`} className="font-semibold text-blue-700 underline">{s.topics?.name ?? "Mentoría"} con {nombre(s.mentor_id)}</Link>
+                      <p className="whitespace-pre-wrap text-slate-700">{s.followup}</p>
+                    </li>
+                  ))}
+                </ul>
+              ) : <Vacio>Después de cada sesión, tu mentor puede dejarte siguientes pasos aquí.</Vacio>}
             </Tarjeta>
             <Tarjeta titulo="Mentores favoritos">
               {favoritos.length ? (

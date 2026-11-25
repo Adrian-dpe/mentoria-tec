@@ -6,6 +6,18 @@ export function Estado({ status }: { status: string }) {
   return <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${e.color}`}>{e.texto}</span>;
 }
 
+export function Avatar({ url, nombre, size = 48 }: { url?: string | null; nombre: string; size?: number }) {
+  const iniciales = nombre.split(" ").filter(Boolean).slice(0, 2).map((p) => p[0]).join("").toUpperCase();
+  return url ? (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src={url} alt={nombre} width={size} height={size} className="shrink-0 rounded-full object-cover" style={{ width: size, height: size }} />
+  ) : (
+    <div className="flex shrink-0 items-center justify-center rounded-full bg-blue-100 font-semibold text-blue-800" style={{ width: size, height: size, fontSize: size / 2.6 }}>
+      {iniciales || "?"}
+    </div>
+  );
+}
+
 export function Chip({ children }: { children: React.ReactNode }) {
   return <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-700">{children}</span>;
 }

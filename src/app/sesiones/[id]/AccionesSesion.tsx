@@ -145,7 +145,7 @@ export default function AccionesSesion({ sesion: s, soyMentor, nombreOtro, tiene
           {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
         </Tarjeta>
       )}
-      {mostrarFeedback && <Feedback sesionId={s.id} />}
+      {mostrarFeedback && <Feedback sesionId={s.id} tema={s.topics?.name ?? null} />}
     </>
   );
 }
@@ -164,15 +164,18 @@ function Formulario({ children, onEnviar, ocupado, boton, peligro }: {
   );
 }
 
-function Feedback({ sesionId }: { sesionId: number }) {
+function Feedback({ sesionId, tema }: { sesionId: number; tema: string | null }) {
   const router = useRouter();
   const [v, setV] = useState({ usefulness: 0, clarity: 0, attitude: 0, comment: "" });
+  const [temaOk, setTemaOk] = useState(true);
+  const [otroTema, setOtroTema] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   async function enviar() {
     if (!v.usefulness || !v.clarity || !v.attitude) return setError("Califica los tres aspectos.");
     const supabase = createClient();
-    const { error } = await supabase.from("feedback").insert({ session_id: sesionId, ...v, comment: v.comment.trim() || null });
+    const topic_covered = temaOk ? tema ?? "El tema solicitado" : otroTema.trim() || "Otro tema";
+    const { error } = await supabase.from("feedback").insert({ session_id: sesionId, ...v, topic_covered, comment: v.comment.trim() || null });
     if (error) return setError(error.message);
     router.refresh();
   }
@@ -200,6 +203,16 @@ function Feedback({ sesionId }: { sesionId: number }) {
         <Estrellas campo="usefulness" etiqueta="Utilidad de la sesión" />
         <Estrellas campo="clarity" etiqueta="Claridad de las recomendaciones" />
         <Estrellas campo="attitude" etiqueta="Disposición del mentor" />
+      </div>
+      <div className="mt-3 text-sm text-slate-700">
+        <p className="font-medium">Tema abordado</p>
+        <label className="mt-1 flex items-center gap-2">
+          <input type="radio" checked={temaOk} onChange={() => setTemaOk(true)} /> Hablamos de {tema ?? "el tema que pedí"}
+        </label>
+        <label className="flex items-center gap-2">
+          <input type="radio" checked={!temaOk} onChange={() => setTemaOk(false)} /> Hablamos de otro tema
+        </label>
+        {!temaOk && <input className={inputCls} placeholder="¿De qué tema?" value={otroTema} onChange={(e) => setOtroTema(e.target.value)} />}
       </div>
       <label className={`${labelCls} mt-3`}>Comentario (opcional)</label>
       <textarea className={inputCls} rows={2} value={v.comment} onChange={(e) => setV({ ...v, comment: e.target.value })} />
