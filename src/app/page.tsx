@@ -24,7 +24,7 @@ export default function Home() {
       <header className="mx-auto flex max-w-5xl items-center justify-between px-4 py-5">
         <span className="text-lg font-bold">Mentoría Tec</span>
         <a
-          href="#"
+          href="/entrar"
           className="rounded-lg bg-blue-700 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-800"
         >
           Entrar con correo @tec.mx
@@ -40,10 +40,10 @@ export default function Home() {
           experiencia en internships, intercambios, certificaciones y más.
         </p>
         <div className="mt-8 flex flex-wrap gap-3">
-          <a href="#" className="rounded-lg bg-blue-700 px-5 py-3 font-semibold text-white hover:bg-blue-800">
+          <a href="/entrar" className="rounded-lg bg-blue-700 px-5 py-3 font-semibold text-white hover:bg-blue-800">
             Busco mentoría
           </a>
-          <a href="#" className="rounded-lg border border-slate-300 px-5 py-3 font-semibold hover:bg-slate-50">
+          <a href="/entrar" className="rounded-lg border border-slate-300 px-5 py-3 font-semibold hover:bg-slate-50">
             Quiero ser mentor
           </a>
         </div>
