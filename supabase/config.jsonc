@@ -228,7 +228,7 @@
 
     "rate_limit": {
       // Number of emails that can be sent per hour. Requires auth.email.smtp to be enabled.
-      "email_sent": 2,
+      "email_sent": 30,
       // Number of SMS messages that can be sent per hour. Requires auth.sms to be enabled.
       "sms_sent": 30,
       // Number of anonymous sign-ins that can be made per hour per IP address. Requires enable_anonymous_sign_ins = true.
@@ -282,7 +282,17 @@
       //   "sender_name": "Admin"
       // },
 
-      // Plantillas personalizadas: requieren SMTP propio (Resend). Ver supabase/templates/codigo.html.
+      // Correos en español con código (requiere el SMTP propio de Brevo, configurado en el dashboard).
+      "template": {
+        "magic_link": {
+          "subject": "Tu código para entrar a Mentoría Tec",
+          "content_path": "./supabase/templates/codigo.html"
+        },
+        "confirmation": {
+          "subject": "Tu código para entrar a Mentoría Tec",
+          "content_path": "./supabase/templates/codigo.html"
+        }
+      },
       // Uncomment to customize email template
       // "template": {
       //   "invite": {
