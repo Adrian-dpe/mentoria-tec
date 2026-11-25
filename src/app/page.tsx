@@ -70,7 +70,8 @@ export default function Home() {
 
       <footer className="mx-auto max-w-5xl px-4 py-8 text-sm text-slate-500">
         Servicio voluntario entre miembros de la comunidad. No es una asesoría profesional oficial
-        ni sustituye los canales institucionales.
+        ni sustituye los canales institucionales.{" "}
+        <a href="/reglas" className="underline">Reglas de la comunidad</a>
       </footer>
     </main>
   );

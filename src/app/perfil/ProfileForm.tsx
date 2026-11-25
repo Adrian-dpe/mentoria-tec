@@ -9,7 +9,6 @@ import { createClient } from "@/lib/supabase/client";
 
 type Tema = { id: number; name: string; category: string };
 type MiTema = { topic_id: number; kind: string };
-/* eslint-disable @typescript-eslint/no-explicit-any */
 type Props = {
   userId: string;
   email: string;
@@ -319,7 +318,8 @@ export default function ProfileForm({ userId, email, perfil, link, temas, misTem
         <p>
           Mentoría Tec es un servicio <strong>voluntario</strong> entre miembros de la comunidad. No es una
           asesoría profesional oficial ni sustituye los canales institucionales. Me comprometo a tratar a
-          todos con respeto, cuidar la información personal de otros y reportar cualquier situación inapropiada.
+          todos con respeto, cuidar la información personal de otros y reportar cualquier situación inapropiada.{" "}
+          <a href="/reglas" target="_blank" className="text-blue-700 underline">Leer las reglas completas</a>.
         </p>
         <label className="mt-3 flex items-center gap-2 font-medium">
           <input type="checkbox" checked={f.accepted} onChange={(e) => set("accepted", e.target.checked)} />

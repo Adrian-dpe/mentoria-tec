@@ -3,7 +3,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-const RUTAS_PRIVADAS = ["/panel", "/perfil"];
+const RUTAS_PRIVADAS = ["/panel", "/perfil", "/mentores", "/sesiones", "/disponibilidad", "/admin", "/constancia"];
 
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request });

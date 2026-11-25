@@ -2,6 +2,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import ProfileForm from "./ProfileForm";
+import Nav from "@/components/Nav";
 
 export default async function PerfilPage() {
   const supabase = await createClient();
@@ -18,7 +19,9 @@ export default async function PerfilPage() {
   ]);
 
   return (
-    <main className="min-h-screen bg-slate-50 px-4 py-10">
+    <div className="min-h-screen bg-slate-50">
+    <Nav />
+    <main className="px-4 py-10">
       <div className="mx-auto max-w-2xl">
         <h1 className="text-3xl font-bold text-slate-900">Mi perfil</h1>
         <p className="mt-1 text-slate-600">
@@ -34,5 +37,6 @@ export default async function PerfilPage() {
         />
       </div>
     </main>
+    </div>
   );
 }
