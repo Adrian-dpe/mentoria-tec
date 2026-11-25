@@ -4,7 +4,7 @@
 // recibe un link para entrar. No hay contraseñas.
 import { useState } from "react";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
+import { createClient as createSupabase } from "@supabase/supabase-js";
 
 export default function EntrarPage() {
   const [correo, setCorreo] = useState("");
@@ -16,7 +16,13 @@ export default function EntrarPage() {
     setError(null);
     setEstado("enviando");
 
-    const supabase = createClient();
+    // Flujo "implicit": el link funciona aunque se abra en otro navegador o
+    // en el celular (no depende de una llave guardada en este navegador).
+    const supabase = createSupabase(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+      { auth: { flowType: "implicit", persistSession: false, detectSessionInUrl: false } },
+    );
     const { error } = await supabase.auth.signInWithOtp({
       email: correo.trim().toLowerCase(),
       options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
@@ -47,8 +53,8 @@ export default function EntrarPage() {
           <div className="mt-6">
             <h1 className="text-2xl font-bold text-slate-900">Revisa tu correo</h1>
             <p className="mt-2 text-slate-600">
-              Te enviamos un link a <strong>{correo}</strong>. Ábrelo <strong>en este mismo
-              navegador</strong> para entrar.
+              Te enviamos un link a <strong>{correo}</strong>. Ábrelo para entrar
+              (puede ser desde tu celular).
             </p>
             <p className="mt-4 text-sm text-slate-500">
               ¿No llegó? Revisa la carpeta de spam o{" "}
