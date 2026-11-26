@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Mentoría Tec",
-  description: "Mentoría entre estudiantes y egresados del Tec",
+  title: "PCT · Plataforma de Conexión de Talento",
+  description: "PCT: Plataforma de Conexión de Talento. Mentoría entre estudiantes y egresados del Tec",
 };
 
 export default function RootLayout({

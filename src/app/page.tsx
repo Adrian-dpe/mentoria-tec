@@ -22,7 +22,7 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-white text-slate-900">
       <header className="mx-auto flex max-w-5xl items-center justify-between px-4 py-5">
-        <span className="text-lg font-bold">Mentoría Tec</span>
+        <span className="text-lg font-bold">PCT <span className="hidden font-normal text-slate-500 sm:inline">· Plataforma de Conexión de Talento</span></span>
         <a
           href="/entrar"
           className="rounded-lg bg-blue-700 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-800"

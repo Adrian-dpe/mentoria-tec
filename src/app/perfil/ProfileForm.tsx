@@ -427,7 +427,7 @@ export default function ProfileForm({ userId, email, perfil, link, temas, misTem
       {/* Código de conducta */}
       <section className="rounded-2xl border border-slate-200 bg-white p-5 text-sm text-slate-700">
         <p>
-          Mentoría Tec es un servicio <strong>voluntario</strong> entre miembros de la comunidad. No es una
+          PCT es un servicio <strong>voluntario</strong> entre miembros de la comunidad. No es una
           asesoría profesional oficial ni sustituye los canales institucionales. Me comprometo a tratar a
           todos con respeto, cuidar la información personal de otros y reportar cualquier situación inapropiada.{" "}
           <a href="/reglas" target="_blank" className="text-blue-700 underline">Leer las reglas completas</a>.

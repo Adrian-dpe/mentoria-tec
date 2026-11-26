@@ -9,7 +9,7 @@ export default async function ReglasPage() {
   return (
     <main className="min-h-screen bg-slate-50 px-4 py-10">
       <div className="mx-auto max-w-2xl rounded-2xl border border-slate-200 bg-white p-6">
-        <Link href="/" className="text-sm font-bold text-slate-900">Mentoría Tec</Link>
+        <Link href="/" className="text-sm font-bold text-slate-900">PCT · Plataforma de Conexión de Talento</Link>
         <h1 className="mt-4 text-2xl font-bold text-slate-900">Código de conducta y reglas de la comunidad</h1>
         {reglas && reglas.length > 0 ? (
           <ol className="mt-4 list-decimal space-y-2 pl-5 text-slate-700">
@@ -19,7 +19,7 @@ export default async function ReglasPage() {
           <p className="mt-4 text-slate-600">Inicia sesión para ver las reglas de la comunidad.</p>
         )}
         <p className="mt-6 text-sm text-slate-500">
-          Mentoría Tec es un servicio voluntario entre miembros de la comunidad. No es una asesoría profesional
+          PCT es un servicio voluntario entre miembros de la comunidad. No es una asesoría profesional
           oficial ni sustituye los canales institucionales.
         </p>
       </div>

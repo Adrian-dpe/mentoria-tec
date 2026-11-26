@@ -39,10 +39,10 @@ export default function AccionesSesion({ sesion: s, soyMentor, nombreOtro, tiene
     const inicio = new Date(s.starts_at);
     const fin = new Date(inicio.getTime() + s.duration_min * 60000);
     const ics = [
-      "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Mentoria Tec//ES", "BEGIN:VEVENT",
+      "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//PCT//ES", "BEGIN:VEVENT",
       `UID:mentoria-${s.id}@mentoria-tec`, `DTSTAMP:${f(new Date())}`, `DTSTART:${f(inicio)}`, `DTEND:${f(fin)}`,
       `SUMMARY:Mentoría con ${nombreOtro}`,
-      `DESCRIPTION:${(s.meeting_link ? `Enlace: ${s.meeting_link}\\n` : "") + "Mentoría Tec"}`,
+      `DESCRIPTION:${(s.meeting_link ? `Enlace: ${s.meeting_link}\\n` : "") + "PCT · Plataforma de Conexión de Talento"}`,
       ...(s.meeting_link ? [`LOCATION:${s.meeting_link}`] : []),
       "END:VEVENT", "END:VCALENDAR",
     ].join("\r\n");

@@ -41,7 +41,7 @@ export default async function Nav() {
     <header className="border-b border-slate-200 bg-white">
       <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-2 px-4 py-3">
         <Link href="/panel" className="text-lg font-bold text-slate-900">
-          Mentoría Tec
+          PCT
         </Link>
         <nav className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
           {links.map((l) => (

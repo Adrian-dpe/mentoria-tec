@@ -285,11 +285,11 @@
       // Correos en español con código (requiere el SMTP propio de Brevo, configurado en el dashboard).
       "template": {
         "magic_link": {
-          "subject": "Tu código para entrar a Mentoría Tec",
+          "subject": "Tu código para entrar a PCT",
           "content_path": "./supabase/templates/codigo.html"
         },
         "confirmation": {
-          "subject": "Tu código para entrar a Mentoría Tec",
+          "subject": "Tu código para entrar a PCT",
           "content_path": "./supabase/templates/codigo.html"
         }
       },

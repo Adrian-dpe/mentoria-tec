@@ -23,7 +23,7 @@ export default async function ConstanciaPage() {
       <main className="mx-auto max-w-3xl px-4 py-8">
         <div className="mb-4 flex justify-end print:hidden"><Imprimir /></div>
         <article className="rounded-2xl border-4 border-double border-blue-800 bg-white p-10 text-center">
-          <p className="text-sm uppercase tracking-[0.3em] text-blue-800">Mentoría Tec</p>
+          <p className="text-sm uppercase tracking-[0.3em] text-blue-800">PCT · Plataforma de Conexión de Talento</p>
           <h1 className="mt-4 text-3xl font-bold text-slate-900">Constancia de participación</h1>
           <p className="mt-6 text-slate-700">Se reconoce a</p>
           <p className="mt-2 text-2xl font-semibold text-slate-900">{perfil.full_name}</p>
